@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GestionEntradasInventario.Models;
 
@@ -15,4 +16,7 @@ public class Entradas
 
     [Required(ErrorMessage = "El total es requerido")]
     public double Total { get; set; }
+
+    [ForeignKey(nameof(EntradaId))]
+    public virtual ICollection<EntradaDetalles> EntradaDetalles { get; set; } = new List<EntradaDetalles>(); 
 }
