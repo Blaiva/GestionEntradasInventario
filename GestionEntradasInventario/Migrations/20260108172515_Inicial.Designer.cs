@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GestionEntradasInventario.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260108151127_Segunda")]
-    partial class Segunda
+    [Migration("20260108172515_Inicial")]
+    partial class Inicial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -99,7 +99,7 @@ namespace GestionEntradasInventario.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DetalleId"));
 
-                    b.Property<int>("Cantdiad")
+                    b.Property<int>("Cantidad")
                         .HasColumnType("int");
 
                     b.Property<double>("Costo")
