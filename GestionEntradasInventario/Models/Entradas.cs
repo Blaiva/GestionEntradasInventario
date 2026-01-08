@@ -15,6 +15,7 @@ public class Entradas
     public string Concepto { get; set; }
 
     [Required(ErrorMessage = "El total es requerido")]
+    [Range(0.01, double.MaxValue, ErrorMessage = "El total debe ser mayor que 0")]
     public double Total { get; set; }
 
     [ForeignKey(nameof(EntradaId))]
