@@ -1,0 +1,165 @@
+﻿@page "/Entradas/Index"
+
+@inject EntradasService entradasService
+@inject NavigationManager navigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Registro de Entradas</PageTitle>
+<div class="container">
+	<div class="card shadow-lg">
+		@*Header*@
+		<div class="card-header text-center">
+			<h5 class="card-title">Entradas</h5>
+		</div>
+
+		@*Body*@
+		<div class="card-body">
+
+			@*Labels para Fechas*@
+			<div class="row">
+				<div class="col-3">
+					<label class="col-form-label"><strong>Desde</strong></label>
+				</div>
+
+				<div class="col-3">
+					<label class="col-form-label"><strong>Hasta</strong></label>
+				</div>
+			</div>
+
+			@*Inputs de Fechas*@
+			<div class="row mb-3">
+				<div class="col-3">
+					<InputDate class="form-control" @bind-Value="FechaDesde" />
+				</div>
+
+				<div class="col-3">
+					<InputDate class="form-control" @bind-Value="FechaHasta" />
+				</div>
+			</div>
+
+			@*Labels Filtro*@
+			<div class="row">
+				<div class="col-3">
+					<label class="col-form-label"><strong>Filtrar por</strong></label>
+				</div>
+
+				<div class="col-4">
+					<label class="col-form-label"><strong>Buscar</strong></label>
+				</div>
+			</div>
+
+			@*Inputs y buttons*@
+			<div class="row align-items-center">
+				<div class="col-3">
+					<InputSelect class="form-select" @bind-Value="Filtro">
+						<option value="" selected disabled>Elige una opci&oacute;n</option>
+						<option value="Id">Id</option>
+						<option value="Concepto">Concepto</option>
+						<option value="Total">Total</option>
+					</InputSelect>
+				</div>
+
+				<div class="col-4">
+					<div class="input-group">
+						<input class="form-control" @bind="ValorFiltro" placeholder="Buscar" />
+						<button type="button" class="btn btn-outline-primary" @onclick="Buscar"><span class="bi bi-search" /></button>
+						<button type="button" class="btn btn-outline-secondary" @onclick="Restablecer"><span class="bi bi-arrow-counterclockwise" /></button>
+					</div>
+				</div>
+
+				<div class="col-5 text-end">
+					<a href="/create-entrada" class="btn btn-primary"><span class="bi bi-plus-square" /> Crear</a>
+				</div>
+			</div>
+
+			@*Tabla*@
+			<table class="table table-hover mt-3">
+				@*Encabezados de la tabla*@
+				<thead class="table table-striped text-black">
+					<tr>
+						<th>ID</th>
+						<th>Fecha</th>
+						<th>Concepto</th>
+						<th>Total</th>
+						<th>Opciones</th>
+					</tr>
+				</thead>
+				@*Datos de la tabla*@
+				<tbody>
+					@foreach (var entrada in ListaEntradas)
+					{
+						<tr>
+							<td>@entrada.EntradaId</td>
+							<td>@entrada.Fecha.ToString("dd/MM/yyyy")</td>
+							<td>@entrada.Concepto</td>
+							<td>RD$@entrada.Total.ToString("N2")</td>
+
+							<td>
+								<a href="/edit-entrada/@entrada.EntradaId" class="btn btn-outline-primary"><span class="bi bi-pencil" /></a>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+
+		@*Footer*@
+		<div class="card-footer">
+			<div class="text-end">
+				<label class="px-2"><strong>Total Entradas: </strong>@ListaEntradas.Count</label>
+			</div>
+		</div>
+	</div>
+</div>
+
+@code {
+	public List<Entradas> ListaEntradas { get; set; } = new List<Entradas>();
+
+	public string Filtro { get; set; } = string.Empty;
+	public string ValorFiltro { get; set; } = string.Empty;
+	public DateTime? FechaDesde { get; set; } = null;
+	public DateTime? FechaHasta { get; set; } = null;
+
+	protected override async Task OnInitializedAsync()
+	{
+		ListaEntradas = await entradasService.Listar(e => e.EntradaId > 0);
+	}
+
+	public async Task Buscar()
+	{
+		// Lógica básica de filtrado
+		if (ValorFiltro.Trim() != "" || FechaDesde.HasValue || FechaHasta.HasValue)
+		{
+			// 1. Filtrar por texto/número primero
+			if (Filtro == "Id")
+				ListaEntradas = await entradasService.Listar(e => e.EntradaId.ToString().Contains(ValorFiltro.Trim()));
+			else if (Filtro == "Concepto")
+				ListaEntradas = await entradasService.Listar(e => e.Concepto.ToLower().Contains(ValorFiltro.Trim().ToLower()));
+			else if (Filtro == "Total")
+				ListaEntradas = await entradasService.Listar(e => e.Total.ToString().Contains(ValorFiltro.Trim()));
+			else
+				ListaEntradas = await entradasService.Listar(e => e.EntradaId > 0);
+
+			// 2. Filtrar por rango de fechas sobre los resultados anteriores
+			if (FechaDesde.HasValue && FechaHasta.HasValue)
+				ListaEntradas = ListaEntradas.Where(e => e.Fecha.Date >= FechaDesde.Value.Date && e.Fecha.Date <= FechaHasta.Value.Date).ToList();
+			else if (FechaDesde.HasValue)
+				ListaEntradas = ListaEntradas.Where(e => e.Fecha.Date >= FechaDesde.Value.Date).ToList();
+			else if (FechaHasta.HasValue)
+				ListaEntradas = ListaEntradas.Where(e => e.Fecha.Date <= FechaHasta.Value.Date).ToList();
+		}
+		else
+		{
+			ListaEntradas = await entradasService.Listar(e => e.EntradaId > 0);
+		}
+	}
+
+	public async Task Restablecer()
+	{
+		ListaEntradas = await entradasService.Listar(e => e.EntradaId > 0);
+		ValorFiltro = string.Empty;
+		Filtro = string.Empty;
+		FechaDesde = null;
+		FechaHasta = null;
+	}
+}
