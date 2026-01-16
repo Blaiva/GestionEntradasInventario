@@ -1,5 +1,218 @@
-﻿<h3>EntradasUpsert</h3>
+﻿@page "/Entradas/Upsert/{EntradaId:int}"
+
+@inject EntradasService entradasService
+@inject ProductosService productosService
+@inject NavigationManager navigationManager
+@rendermode InteractiveServer
+
+<PageTitle>@titulo Entrada</PageTitle>
+
+<EditForm Model="Entrada" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator />
+
+    <div class="container">
+        <div class="card shadow-lg">
+            @*Header*@
+            <div class="card-header text-center">
+                <h5 class="card-title">@titulo Entrada</h5>
+            </div>
+
+            @*Body*@
+            <div class="card-body">
+
+                <div class="row">
+                    <div class="col-3">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>EntradaId</strong></label>
+                            <InputNumber readonly class="form-control" @bind-Value="Entrada.EntradaId" />
+                        </div>
+                    </div>
+
+                    <div class="col-4">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Fecha</strong></label>
+                            <InputDate class="form-control" @bind-Value="Entrada.Fecha" />
+                            <ValidationMessage For="@(() => Entrada.Fecha)" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label"><strong>Concepto</strong></label>
+                    <InputText class="form-control" @bind-Value="Entrada.Concepto" placeholder="Ej: Compra de mercancía mensual" />
+                    <ValidationMessage For="@(() => Entrada.Concepto)" />
+                </div>
+
+                <div class="border border-success p-3 mt-3">
+                    <h5>Detalles de la Entrada</h5>
+
+                    <div class="row">
+                        <div class="col-4">
+                            <label class="col-form-label">Producto:</label>
+                        </div>
+                        <div class="col-3">
+                            <label class="col-form-label">Costo:</label>
+                        </div>
+                        <div class="col-3">
+                            <label class="col-form-label">Cantidad:</label>
+                        </div>
+                        <div class="col-2">
+                            <label class="col-form-label">Acción:</label>
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-4">
+                            <InputSelect class="form-select" @bind-Value="Detalle.ProductoId">
+                                <option disabled value="0">Seleccione un Producto</option>
+                                @foreach (var producto in ListaProductos)
+                                {
+                                    <option value="@producto.ProductoId">@producto.Descripcion</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-3">
+                            <InputNumber class="form-control" @bind-Value="Detalle.Costo" />
+                        </div>
+
+                        <div class="col-3">
+                            <InputNumber class="form-control" @bind-Value="Detalle.Cantidad" />
+                        </div>
+
+                        <div class="col-2">
+                            <button type="button" class="btn btn-outline-success w-100" @onclick="AgregarDetalle">
+                                <span class="bi bi-plus" /> Agregar
+                            </button>
+                        </div>
+                    </div>
+
+                    <table class="table table-light">
+                        <thead class="table table-striped table-bordered">
+                            <tr class="text-center">
+                                <th>ProductoId</th>
+                                <th>Descripción</th>
+                                <th>Cantidad</th>
+                                <th>Costo</th>
+                                <th>Importe</th>
+                                <th>Remover</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var detalle in Entrada.EntradaDetalles)
+                            {
+                                <tr class="text-center">
+                                    <td>@detalle.ProductoId</td>
+                                    <td>@ListaProductos.FirstOrDefault(p => p.ProductoId == detalle.ProductoId)?.Descripcion</td>
+                                    <td>@detalle.Cantidad</td>
+                                    <td>RD$@Math.Round(detalle.Costo, 2)</td>
+                                    <td>RD$@Math.Round(detalle.Cantidad * detalle.Costo, 2)</td>
+                                    <td>
+                                        <button type="button" class="btn btn-outline-danger" @onclick="() => RemoverDetalle(detalle)">
+                                            <span class="bi bi-trash" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <hr />
+                </div>
+
+                <div class="row">
+                    <div class="col-3 offset-9">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Total</strong></label>
+                            <label class="form-control text-end"><strong>RD$@Math.Round(Entrada.Total, 2)</strong></label>
+                            <ValidationMessage For="@(() => Entrada.Total)" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @*Footer*@
+            <div class="card-footer text-center">
+                <div class="btn-group">
+                    <a href="/Entradas/Index" class="btn btn-outline-secondary"><span class="bi bi-arrow-bar-left" /> Volver</a>
+                    <button type="submit" class="btn btn-outline-success"><span class="bi bi-check-circle" /> Guardar</button>
+                    @if (titulo == "Editar")
+                    {
+                        <button type="button" class="btn btn-outline-danger" @onclick="Eliminar"><span class="bi bi-trash" /> Eliminar</button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
 
 @code {
+    [Parameter]
+    public int EntradaId { get; set; }
 
+    public string titulo { get; set; } = "Crear";
+    public Entradas Entrada { get; set; } = new Entradas();
+    public EntradaDetalles Detalle { get; set; } = new EntradaDetalles();
+    public List<Productos> ListaProductos { get; set; } = new List<Productos>();
+
+    private bool resultado = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        titulo = EntradaId == 0 ? "Crear" : "Editar";
+
+        ListaProductos = await productosService.Listar(p => true);
+
+        if (EntradaId > 0)
+        {
+            Entrada = await entradasService.Buscar(EntradaId);
+        }
+        else
+        {
+            Entrada.Fecha = DateTime.Now;
+        }
+    }
+
+    private void AgregarDetalle()
+    {
+        if (Detalle.ProductoId <= 0 || Detalle.Cantidad <= 0 || Detalle.Costo <= 0)
+        {
+            return;
+        }
+
+        Entrada.EntradaDetalles.Add(Detalle);
+
+        CalcularTotal();
+
+        Detalle = new EntradaDetalles();
+    }
+
+    public void RemoverDetalle(EntradaDetalles detalle)
+    {
+        Entrada.EntradaDetalles.Remove(detalle);
+        CalcularTotal();
+        Detalle = detalle;
+    }
+
+    private void CalcularTotal()
+    {
+        Entrada.Total = Entrada.EntradaDetalles.Sum(d => d.Cantidad * d.Costo);
+    }
+
+    public async Task Guardar()
+    {
+        resultado = await entradasService.Guardar(Entrada);
+        if (resultado)
+        {
+            navigationManager.NavigateTo("/Entradas/Index");
+        }
+    }
+
+    public async Task Eliminar()
+    {
+        resultado = await entradasService.Eliminar(EntradaId);
+        if (resultado)
+        {
+            navigationManager.NavigateTo("/Entradas/Index");
+        }
+    }
 }
