@@ -4,6 +4,8 @@
 @inject NavigationManager navigationManager
 @rendermode InteractiveServer
 
+@attribute [Authorize]
+
 <PageTitle>@Titulo Producto</PageTitle>
 
 <EditForm Model="Producto" OnValidSubmit="Guardar">
